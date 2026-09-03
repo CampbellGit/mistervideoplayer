@@ -61,4 +61,10 @@ int decoder_scale_video(struct decoder *d, uint8_t *dst, int dst_w, int dst_h,
 int decoder_resample_audio(struct decoder *d, int16_t *dst, int max_frames);
 int decoder_max_audio_frames(struct decoder *d);
 
+/* Seeks to the nearest keyframe at or before target_seconds (clamped to
+ * >= 0) and flushes decoder state. Caller still needs to discard/rebase
+ * anything it tracks about "current position" itself (queued audio,
+ * wall-clock pacing baseline for video-only files, etc). */
+int decoder_seek(struct decoder *d, double target_seconds);
+
 #endif

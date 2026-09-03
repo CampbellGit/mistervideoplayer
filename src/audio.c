@@ -167,3 +167,13 @@ int audio_write(struct audio_out *a, const int16_t *samples, int frames)
 
 	return frames;
 }
+
+void audio_flush(struct audio_out *a)
+{
+	pthread_mutex_lock(&a->mutex);
+	a->ring_write_pos = 0;
+	a->ring_read_pos = 0;
+	a->ring_filled = 0;
+	pthread_cond_broadcast(&a->cond); /* wake a producer that was blocked waiting on room */
+	pthread_mutex_unlock(&a->mutex);
+}

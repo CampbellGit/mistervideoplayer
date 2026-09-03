@@ -194,3 +194,22 @@ int decoder_resample_audio(struct decoder *d, int16_t *dst, int max_frames)
 		(const uint8_t **)d->frame->data, d->frame->nb_samples);
 	return converted < 0 ? -1 : converted;
 }
+
+int decoder_seek(struct decoder *d, double target_seconds)
+{
+	if (target_seconds < 0)
+		target_seconds = 0;
+
+	int64_t ts = (int64_t)(target_seconds * AV_TIME_BASE);
+	if (av_seek_frame(d->fmt, -1, ts, AVSEEK_FLAG_BACKWARD) < 0)
+		return -1;
+
+	if (d->vctx)
+		avcodec_flush_buffers(d->vctx);
+	if (d->actx)
+		avcodec_flush_buffers(d->actx);
+
+	d->video_pts_s = -1;
+	d->audio_pts_s = -1;
+	return 0;
+}

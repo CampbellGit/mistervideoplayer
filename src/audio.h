@@ -35,4 +35,12 @@ void audio_close(struct audio_out *a);
  * feeder thread does the actual (potentially blocking) ALSA write. */
 int audio_write(struct audio_out *a, const int16_t *samples, int frames);
 
+/* Discards whatever's currently queued in the ring buffer -- call this
+ * right after a seek, so stale pre-seek audio doesn't keep playing out
+ * of order. Does not touch whatever ALSA's own tiny hardware buffer is
+ * already mid-playing (at most ~100ms on this platform); that's a minor,
+ * acceptable blip rather than worth the complexity/risk of reaching into
+ * the ALSA handle from a thread other than the feeder. */
+void audio_flush(struct audio_out *a);
+
 #endif

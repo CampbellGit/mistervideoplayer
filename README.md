@@ -46,7 +46,7 @@ Either grab a prebuilt zip from [Releases](../../releases) (built by `.github/wo
 
 4. **Add your videos.** Create `/media/fat/video/` on the SD card and put your video files there (subfolders are fine -- the on-screen browser lets you navigate into them).
 
-5. **Launch it.** From the MiSTer main menu, open **Scripts**, then select **VideoPlayer**. Use up/down to move through the list, Enter to open a folder or play a file, Esc to go back a folder (or quit at the top level), `p` to pause during playback, `q` to quit playback and return to the browser.
+5. **Launch it.** From the MiSTer main menu, open **Scripts**, then select **VideoPlayer**. In the browser: up/down to move through the list, Enter to open a folder or play a file, Esc to go back a folder (or quit at the top level). During playback: left/right to seek back/forward 10 seconds, `p` to pause, Esc/`q` to stop and return to the browser.
 
 If nothing shows up on screen, double check `fb_terminal=1` is actually set and the SD card was ejected/saved properly -- this is the single most likely thing to get wrong, and it's a symptom that looks identical to "the app crashed" from the outside.
 

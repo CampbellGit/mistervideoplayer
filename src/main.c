@@ -72,6 +72,28 @@ static void play_file(const char *path, struct fb_dev *fb, struct input_state *i
 		}
 		if (action == INPUT_PAUSE)
 			paused = !paused;
+
+		if (action == INPUT_LEFT || action == INPUT_RIGHT) {
+			double current = have_audio ? audio_clock_s : dec.video_pts_s;
+			if (current < 0)
+				current = 0;
+			double target = current + (action == INPUT_RIGHT ? 10.0 : -10.0);
+
+			if (decoder_seek(&dec, target) == 0) {
+				if (have_audio)
+					audio_flush(&audio); /* drop stale pre-seek audio, not the new position's */
+				audio_clock_s = target < 0 ? 0 : target;
+				play_start_wall = -1; /* re-baseline wall-clock pacing for video-only files */
+				fprintf(stderr, "main: seek to %.1fs\n", target);
+			} else {
+				fprintf(stderr, "main: seek to %.1fs failed\n", target);
+			}
+			/* Same bounce risk as browser navigation -- without this a
+			 * single press on noisy input could turn "skip 10s" into
+			 * "skip 40s". */
+			usleep(150000);
+		}
+
 		if (paused) {
 			usleep(20000);
 			continue;
