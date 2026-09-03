@@ -1,0 +1,5 @@
+*.o
+/vplayer
+/vplayer-arm
+/dist/
+.DS_Store

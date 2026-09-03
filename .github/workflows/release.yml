@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cross-build + package vplayer-arm
+        run: make docker-package
+
+      - name: Assemble SD-card-layout release bundle
+        run: |
+          set -e
+          STAGE=stage
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE/video-player" "$STAGE/Scripts"
+          cp -r dist/* "$STAGE/video-player/"
+          cp scripts/VideoPlayer.sh "$STAGE/Scripts/VideoPlayer.sh"
+          chmod +x "$STAGE/Scripts/VideoPlayer.sh" "$STAGE/video-player/vplayer" "$STAGE/video-player/vplayer-arm"
+          cd "$STAGE" && zip -r "../vplayer-${GITHUB_REF_NAME:-dev}.zip" video-player Scripts
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vplayer-release
+          path: vplayer-*.zip
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: vplayer-*.zip
+          generate_release_notes: true
