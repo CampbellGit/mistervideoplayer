@@ -43,7 +43,8 @@ static void play_file(const char *path, struct fb_dev *fb, struct input_state *i
 	}
 
 	struct audio_out audio = { 0 };
-	int have_audio = decoder_has_audio(&dec) &&
+	int file_has_audio_track = decoder_has_audio(&dec);
+	int have_audio = file_has_audio_track &&
 		audio_open(&audio, getenv("VPLAYER_AUDIO_DEVICE") ? getenv("VPLAYER_AUDIO_DEVICE") : "default") == 0;
 
 	int16_t audio_buf[8192 * 2];
@@ -53,6 +54,8 @@ static void play_file(const char *path, struct fb_dev *fb, struct input_state *i
 	int paused = 0;
 
 	printf("\x1b[2J\x1b[Hplaying %s (audio=%s)\r\n", path, have_audio ? "yes" : "no");
+	fprintf(stderr, "main: playing %s -- file_has_audio_track=%d audio_open_ok=%d\n",
+		path, file_has_audio_track, have_audio);
 
 	for (;;) {
 		enum input_action action = input_poll(in);
@@ -117,8 +120,32 @@ static void play_file(const char *path, struct fb_dev *fb, struct input_state *i
 	decoder_close(&dec);
 }
 
+static void redirect_stderr_to_log(void)
+{
+	/* Once we're drawing real video frames into /dev/fb0, anything we
+	 * print to the tty gets overwritten by the next frame almost
+	 * immediately -- there's no way to actually read diagnostics on
+	 * screen. Send stderr to a persistent log file instead so failures
+	 * (audio device busy, decode errors, etc.) are inspectable after
+	 * the fact over SSH. */
+	const char *log_path = getenv("VPLAYER_LOG");
+	if (!log_path)
+		log_path = "/media/fat/video-player/vplayer.log";
+
+	FILE *log = fopen(log_path, "a");
+	if (!log)
+		return; /* stderr just stays on the tty, no harm done */
+
+	dup2(fileno(log), STDERR_FILENO);
+	fclose(log);
+	setvbuf(stderr, NULL, _IOLBF, 0); /* line-buffered so entries land promptly */
+	fprintf(stderr, "\n--- vplayer starting ---\n");
+}
+
 int main(int argc, char **argv)
 {
+	redirect_stderr_to_log();
+
 	const char *target = argc > 1 ? argv[1] : "/media/fat/video";
 	const char *fb_path = getenv("VPLAYER_FB_DEVICE");
 	if (!fb_path)

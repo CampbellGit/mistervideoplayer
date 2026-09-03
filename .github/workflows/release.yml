@@ -28,6 +28,11 @@ jobs:
           cp scripts/VideoPlayer.sh "$STAGE/Scripts/VideoPlayer.sh"
           chmod +x "$STAGE/Scripts/VideoPlayer.sh" "$STAGE/video-player/vplayer" "$STAGE/video-player/vplayer-arm"
           cd "$STAGE" && zip -r "../vplayer-${GITHUB_REF_NAME:-dev}.zip" video-player Scripts
+          cd ..
+          # Stable, version-independent copy: GitHub's /releases/latest/download/<name>
+          # alias only works with a fixed filename, since asset names otherwise
+          # change every release. This is what a download-all script should target.
+          cp "vplayer-${GITHUB_REF_NAME:-dev}.zip" vplayer-latest.zip
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4

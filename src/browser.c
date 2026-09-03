@@ -76,15 +76,26 @@ static int list_dir(const char *path, struct entry *out, int max)
 	return count;
 }
 
+/* CRT overscan crops the outer edge of the picture, so a leading "> "
+ * marker in column 0 (or content on the very first/last row) can end up
+ * invisible. Margin everything a couple of rows/columns in, and make the
+ * selected line's highlight the whole line (reverse video) rather than a
+ * marker that lives exactly where overscan likes to eat it. */
+#define MARGIN_COLS "  "
+
 static void draw(const char *cur_dir, struct entry *entries, int count, int sel)
 {
-	printf("\x1b[2J\x1b[H");
-	printf("Video Player -- %s\r\n\r\n", cur_dir);
+	printf("\x1b[2J\x1b[H\r\n");
+	printf(MARGIN_COLS "Video Player -- %s\r\n\r\n", cur_dir);
 	for (int i = 0; i < count; i++) {
-		printf("%s %s%s\r\n", i == sel ? ">" : " ",
-			entries[i].name, entries[i].is_dir ? "/" : "");
+		char line[300];
+		snprintf(line, sizeof(line), "%s%s", entries[i].name, entries[i].is_dir ? "/" : "");
+		if (i == sel)
+			printf(MARGIN_COLS "\x1b[7m> %-40s\x1b[0m\r\n", line);
+		else
+			printf(MARGIN_COLS "  %s\r\n", line);
 	}
-	printf("\r\n[up/down] move  [enter] open  [esc] up/quit  [q] quit\r\n");
+	printf("\r\n" MARGIN_COLS "[up/down] move  [enter] open  [esc] up/quit  [q] quit\r\n\r\n");
 	fflush(stdout);
 }
 
@@ -112,6 +123,8 @@ int browser_run(const char *root_dir, struct input_state *in,
 			usleep(20000);
 			continue;
 		}
+
+		fprintf(stderr, "browser: action=%d sel=%d count=%d dir=%s\n", action, sel, count, cur_dir);
 
 		if (action == INPUT_QUIT)
 			return -1;
@@ -157,5 +170,12 @@ int browser_run(const char *root_dir, struct input_state *in,
 		}
 
 		draw(cur_dir, entries, count, sel);
+
+		/* Debounce: some controllers/wiring send several rapid
+		 * transitions per physical press. Without a cooldown here, a
+		 * single press can register as many presses and wrap the
+		 * selection around the list multiple times, which looks like
+		 * the cursor randomly jumping back to the top. */
+		usleep(150000);
 	}
 }

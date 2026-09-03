@@ -12,15 +12,26 @@ int audio_open(struct audio_out *a, const char *device)
 		return -1;
 	}
 
-	/* Generous buffer (500ms) so a slow/CPU-starved video decode+scale in
-	 * the same loop doesn't starve the ALSA buffer and produce audible
-	 * dropouts -- our decode loop is single-threaded, so anything that
-	 * makes one iteration take a while (a heavy video frame) delays the
-	 * next audio_write() by the same amount. */
-	rc = snd_pcm_set_params(pcm, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED,
-		2, 48000, 1, 500000);
+	/* Prefer a generous buffer (500ms) so a slow/CPU-starved video
+	 * decode+scale in the same loop doesn't starve the ALSA buffer and
+	 * produce audible dropouts -- our decode loop is single-threaded, so
+	 * anything that makes one iteration take a while (a heavy video
+	 * frame) delays the next audio_write() by the same amount. But the
+	 * real hardware device may reject a buffer that large outright
+	 * (unlike ALSA's "null" test sink, which accepts anything) -- fall
+	 * back to smaller values rather than disabling audio entirely. */
+	static const unsigned latencies_us[] = { 500000, 200000, 100000, 50000 };
+	rc = -1;
+	for (size_t i = 0; i < sizeof(latencies_us) / sizeof(latencies_us[0]); i++) {
+		rc = snd_pcm_set_params(pcm, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED,
+			2, 48000, 1, latencies_us[i]);
+		if (rc >= 0) {
+			fprintf(stderr, "audio: using %ums buffer\n", latencies_us[i] / 1000);
+			break;
+		}
+		fprintf(stderr, "audio: %ums buffer rejected: %s\n", latencies_us[i] / 1000, snd_strerror(rc));
+	}
 	if (rc < 0) {
-		fprintf(stderr, "audio: set_params: %s\n", snd_strerror(rc));
 		snd_pcm_close(pcm);
 		return -1;
 	}
