@@ -266,6 +266,13 @@ int main(int argc, char **argv)
 		while (browser_run(target, &in, selected, sizeof(selected)) == 0) {
 			play_file(selected, &fb, &in);
 			fb_blank(&fb); /* clear the last video frame before showing the browser again */
+			/* Whatever press just stopped playback can leave a bounced
+			 * leftover transition queued -- without this it leaks into
+			 * the browser's very first poll and gets misread as a
+			 * fresh action (seen on-device: every Cancel-during-
+			 * playback was immediately followed by an unintended
+			 * Confirm re-triggering the same file). */
+			input_flush(&in);
 		}
 	}
 

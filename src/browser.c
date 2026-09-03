@@ -120,6 +120,11 @@ int browser_run(const char *root_dir, struct input_state *in,
 		return -1;
 	}
 
+	/* Defense in depth: whatever was happening before this call (e.g. a
+	 * bounced leftover transition from whatever press just stopped
+	 * video playback) shouldn't be misread as the first action here. */
+	input_flush(in);
+
 	int sel = 0;
 	draw(cur_dir, entries, count, sel);
 
