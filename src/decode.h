@@ -42,6 +42,14 @@ static inline int decoder_has_audio(struct decoder *d) { return d->a_idx >= 0; }
 int decoder_video_width(struct decoder *d);
 int decoder_video_height(struct decoder *d);
 
+/* When we're badly behind schedule, skip fully decoding non-reference
+ * frames (typically B-frames) instead of paying their full decode cost
+ * only to then drop them at the presentation stage anyway. Cheap safety
+ * valve, not a fix for a source that's fundamentally too heavy for this
+ * CPU -- on a real bitrate gap (source demands ~10x realtime), this buys
+ * some percent, not an order of magnitude. */
+void decoder_set_fast_mode(struct decoder *d, int enable);
+
 /* Reads/decodes until it has something to present. The result tells the
  * caller whether to call decoder_scale_video() or decoder_resample_audio()
  * next; DECODE_AGAIN means "call decoder_step() again", DECODE_EOF means

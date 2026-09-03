@@ -53,6 +53,7 @@ static void play_file(const char *path, struct fb_dev *fb, struct input_state *i
 	double play_start_wall = -1;  /* wall clock at first video frame, for video-only files */
 	double video_pts_base = 0.0;
 	int paused = 0;
+	int fast_mode = 0; /* skipping non-reference frames while badly behind */
 
 	/* The button that just confirmed this file in the browser can leave
 	 * a duplicate/leftover transition queued up; without this, that
@@ -145,10 +146,22 @@ static void play_file(const char *path, struct fb_dev *fb, struct input_state *i
 			 * a stutter when audio itself is briefly starved */
 			sleep_seconds(delta);
 		} else if (delta < -AV_DROP_THRESHOLD_S) {
-			/* way behind: skip presenting this frame to catch back up */
+			/* way behind: skip presenting this frame to catch back up,
+			 * and stop paying full decode cost for non-reference frames
+			 * until we're caught up -- no point fully reconstructing a
+			 * frame we're just going to drop here anyway. */
+			if (!fast_mode) {
+				fast_mode = 1;
+				decoder_set_fast_mode(&dec, 1);
+			}
 			continue;
 		} else if (delta > AV_SYNC_THRESHOLD_S) {
 			sleep_seconds(delta);
+		}
+
+		if (fast_mode) {
+			fast_mode = 0;
+			decoder_set_fast_mode(&dec, 0);
 		}
 
 		decoder_scale_video(&dec, fb_row(fb, 0), fb->width, fb->height, fb->stride, AV_PIX_FMT_BGR0);

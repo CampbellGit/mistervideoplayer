@@ -97,6 +97,12 @@ void decoder_close(struct decoder *d)
 int decoder_video_width(struct decoder *d) { return d->vctx ? d->vctx->width : 0; }
 int decoder_video_height(struct decoder *d) { return d->vctx ? d->vctx->height : 0; }
 
+void decoder_set_fast_mode(struct decoder *d, int enable)
+{
+	if (d->vctx)
+		d->vctx->skip_frame = enable ? AVDISCARD_NONREF : AVDISCARD_DEFAULT;
+}
+
 static double pts_to_seconds(AVFormatContext *fmt, int stream_idx, int64_t pts)
 {
 	if (pts == AV_NOPTS_VALUE)
