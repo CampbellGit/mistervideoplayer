@@ -209,8 +209,11 @@ int main(int argc, char **argv)
 		play_file(target, &fb, &in);
 	} else {
 		char selected[1024];
-		while (browser_run(target, &in, selected, sizeof(selected)) == 0)
+		fb_blank(&fb); /* clear whatever was on screen before we took over */
+		while (browser_run(target, &in, selected, sizeof(selected)) == 0) {
 			play_file(selected, &fb, &in);
+			fb_blank(&fb); /* clear the last video frame before showing the browser again */
+		}
 	}
 
 	input_close_all(&in);

@@ -27,6 +27,12 @@ void fb_close(struct fb_dev *fb);
 /* Blocks until the next vertical sync. No-op on a mock fb. */
 void fb_wait_vsync(struct fb_dev *fb);
 
+/* Fills the entire buffer with black. We never explicitly cleared the
+ * pixel framebuffer when returning from video playback to the text
+ * browser -- the last video frame (or whatever's left of it) could
+ * linger indefinitely until something else overwrites it. */
+void fb_blank(struct fb_dev *fb);
+
 /* Pointer to the start of pixel row y (0-based). */
 static inline uint8_t *fb_row(struct fb_dev *fb, int y)
 {

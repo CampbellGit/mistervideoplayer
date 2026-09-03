@@ -5,6 +5,7 @@
 #include <linux/fb.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -87,6 +88,11 @@ void fb_wait_vsync(struct fb_dev *fb)
 	int arg = 0;
 	if (ioctl(fb->fd, FBIO_WAITFORVSYNC, &arg) < 0 && errno != ENOTTY)
 		perror("fb: FBIO_WAITFORVSYNC");
+}
+
+void fb_blank(struct fb_dev *fb)
+{
+	memset(fb->mem, 0, fb->mem_size);
 }
 
 void fb_close(struct fb_dev *fb)
