@@ -48,6 +48,8 @@ Either grab a prebuilt zip from [Releases](../../releases) (built by `.github/wo
 
 5. **Launch it.** From the MiSTer main menu, open **Scripts**, then select **VideoPlayer**. In the browser: up/down to move through the list, Enter to open a folder or play a file, Esc to go back a folder (or quit at the top level). During playback: left/right to seek back/forward 10 seconds, `p` to pause, Esc/`q` to stop and return to the browser.
 
+**Exiting all the way back to the MiSTer menu takes two presses at the top level, not one.** The first Esc/Back exits the player correctly -- but `Main_MiSTer` itself doesn't redraw its own menu until it sees one more key-release *after* that (this is built into `Main_MiSTer`'s Scripts-launcher state machine, the same mechanism the "Documents" PDF/text viewer uses -- not something this app controls). If the MiSTer menu doesn't reappear after quitting, press Back (or any key) once more.
+
 If nothing shows up on screen, double check `fb_terminal=1` is actually set and the SD card was ejected/saved properly -- this is the single most likely thing to get wrong, and it's a symptom that looks identical to "the app crashed" from the outside.
 
 ## Testing without hardware
