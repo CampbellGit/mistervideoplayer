@@ -49,7 +49,14 @@ static int list_dir(const char *path, struct entry *out, int max)
 	int count = 0;
 	struct dirent *de;
 	while ((de = readdir(d)) && count < max) {
-		if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
+		/* Skip all dotfiles, not just "."/"..": macOS Finder creates a
+		 * "._realname.mp4" AppleDouble metadata sidecar next to every
+		 * real file when copying onto a non-Mac filesystem (like this
+		 * SD card's FAT32), and it matches our extension filter just
+		 * as well as the real file -- selecting one is why "moov atom
+		 * not found" showed up on files that were never actually
+		 * broken. */
+		if (de->d_name[0] == '.')
 			continue;
 
 		char full[PATH_MAX];

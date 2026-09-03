@@ -34,4 +34,11 @@ void input_close_all(struct input_state *in);
  * is pending right now. */
 enum input_action input_poll(struct input_state *in);
 
+/* Discards any currently-queued events on every device. Call this before
+ * starting a new input-driven loop (e.g. right before playback begins)
+ * so a leftover/duplicate transition from whatever button just triggered
+ * entry into that loop can't be misread as an action inside it -- some
+ * controllers/wiring emit more than one transition per physical press. */
+void input_flush(struct input_state *in);
+
 #endif

@@ -1,6 +1,6 @@
 CC ?= cc
-CFLAGS ?= -O2 -Wall -Wextra -std=gnu11
-LDFLAGS ?=
+CFLAGS ?= -O2 -Wall -Wextra -std=gnu11 -pthread
+LDFLAGS ?= -pthread
 
 PKGS := libavformat libavcodec libavutil libswscale libswresample alsa
 

@@ -85,6 +85,18 @@ static enum input_action map_hat_edge(int prev, int cur, enum input_action neg, 
 	return cur < 0 ? neg : pos;
 }
 
+void input_flush(struct input_state *in)
+{
+	struct input_event ev;
+
+	for (int i = 0; i < in->count; i++) {
+		while (read(in->fds[i], &ev, sizeof(ev)) == (ssize_t)sizeof(ev))
+			; /* discard */
+		in->hat_x[i] = 0;
+		in->hat_y[i] = 0;
+	}
+}
+
 enum input_action input_poll(struct input_state *in)
 {
 	struct input_event ev;

@@ -53,6 +53,12 @@ static void play_file(const char *path, struct fb_dev *fb, struct input_state *i
 	double video_pts_base = 0.0;
 	int paused = 0;
 
+	/* The button that just confirmed this file in the browser can leave
+	 * a duplicate/leftover transition queued up; without this, that
+	 * event gets read as an immediate Cancel on the very first loop
+	 * iteration below, exiting before anything is seen or heard. */
+	input_flush(in);
+
 	printf("\x1b[2J\x1b[Hplaying %s (audio=%s)\r\n", path, have_audio ? "yes" : "no");
 	fprintf(stderr, "main: playing %s -- file_has_audio_track=%d audio_open_ok=%d\n",
 		path, file_has_audio_track, have_audio);
