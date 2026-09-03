@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #define AUDIO_FRAME_CAPACITY 8192
 
@@ -16,8 +17,22 @@ static int open_stream(AVFormatContext *fmt, enum AVMediaType type, AVCodecConte
 	if (!ctx)
 		return -1;
 
-	if (avcodec_parameters_to_context(ctx, fmt->streams[idx]->codecpar) < 0 ||
-	    avcodec_open2(ctx, codec, NULL) < 0) {
+	if (avcodec_parameters_to_context(ctx, fmt->streams[idx]->codecpar) < 0) {
+		avcodec_free_context(&ctx);
+		return -1;
+	}
+
+	if (type == AVMEDIA_TYPE_VIDEO) {
+		/* Decode was only ever using one CPU core -- the MiSTer's
+		 * ARM chip is dual-core, so this leaves half the available
+		 * decode throughput completely unused. Most video codecs
+		 * support slice/frame-parallel decode; let ffmpeg use it. */
+		long ncpu = sysconf(_SC_NPROCESSORS_ONLN);
+		ctx->thread_count = (ncpu >= 1 && ncpu <= 8) ? (int)ncpu : 2;
+		ctx->thread_type = FF_THREAD_SLICE | FF_THREAD_FRAME;
+	}
+
+	if (avcodec_open2(ctx, codec, NULL) < 0) {
 		avcodec_free_context(&ctx);
 		return -1;
 	}

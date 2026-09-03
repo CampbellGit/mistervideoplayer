@@ -63,10 +63,13 @@ static void play_file(const char *path, struct fb_dev *fb, struct input_state *i
 	fprintf(stderr, "main: playing %s -- file_has_audio_track=%d audio_open_ok=%d\n",
 		path, file_has_audio_track, have_audio);
 
+	long steps = 0;
 	for (;;) {
 		enum input_action action = input_poll(in);
-		if (action == INPUT_QUIT || action == INPUT_CANCEL)
+		if (action == INPUT_QUIT || action == INPUT_CANCEL) {
+			fprintf(stderr, "main: stopping -- input action=%d after %ld decode steps\n", action, steps);
 			break;
+		}
 		if (action == INPUT_PAUSE)
 			paused = !paused;
 		if (paused) {
@@ -75,8 +78,11 @@ static void play_file(const char *path, struct fb_dev *fb, struct input_state *i
 		}
 
 		enum decode_result rc = decoder_step(&dec);
-		if (rc == DECODE_EOF)
+		steps++;
+		if (rc == DECODE_EOF) {
+			fprintf(stderr, "main: stopping -- decoder EOF after %ld decode steps\n", steps);
 			break;
+		}
 		if (rc == DECODE_AGAIN)
 			continue;
 
