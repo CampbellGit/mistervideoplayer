@@ -178,11 +178,14 @@ int browser_run(const char *root_dir, struct input_state *in,
 
 		draw(cur_dir, entries, count, sel);
 
-		/* Debounce: some controllers/wiring send several rapid
-		 * transitions per physical press. Without a cooldown here, a
-		 * single press can register as many presses and wrap the
-		 * selection around the list multiple times, which looks like
-		 * the cursor randomly jumping back to the top. */
-		usleep(150000);
+		/* Mechanical switch bounce (common on cheap/worn d-pad
+		 * contacts) fires several rapid transitions from one physical
+		 * press, all queued within milliseconds of each other. A plain
+		 * sleep here doesn't help -- it still processes every queued
+		 * transition, just spaced out, which moves the selection
+		 * several times per real press. Discard the whole burst after
+		 * acting on the first transition instead. */
+		input_flush(in);
+		usleep(50000);
 	}
 }
