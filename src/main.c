@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <termios.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -88,10 +89,15 @@ static void play_file(const char *path, struct fb_dev *fb, struct input_state *i
 			} else {
 				fprintf(stderr, "main: seek to %.1fs failed\n", target);
 			}
-			/* Same bounce risk as browser navigation -- without this a
-			 * single press on noisy input could turn "skip 10s" into
-			 * "skip 40s". */
-			usleep(150000);
+			/* Same mechanical-bounce risk as browser navigation, and
+			 * the fix is the same: discard the whole leftover burst,
+			 * don't just sleep. A seek is expensive (discard decoder
+			 * state, jump to the nearest keyframe, decode forward to
+			 * produce a frame again) -- a bounced burst of these was
+			 * seen eating 20-30 back-to-back seeks off one press,
+			 * never settling into actual playback. */
+			input_flush(in);
+			usleep(50000);
 		}
 
 		if (paused) {
@@ -176,9 +182,43 @@ static void redirect_stderr_to_log(void)
 	fprintf(stderr, "\n--- vplayer starting ---\n");
 }
 
+static struct termios g_orig_termios;
+static int g_termios_saved = 0;
+
+static void restore_termios(void)
+{
+	if (g_termios_saved)
+		tcsetattr(STDIN_FILENO, TCSANOW, &g_orig_termios);
+}
+
+static void set_raw_terminal(void)
+{
+	/* We read all input directly from /dev/input/event* (input.c), never
+	 * from stdin -- but the tty's own line discipline doesn't know that,
+	 * and by default echoes every keystroke it sees straight onto the
+	 * screen (which shares the same physical framebuffer memory as our
+	 * video frames). That's what shows up as a stray command prompt or
+	 * echoed characters over the picture. Disabling echo/canonical mode
+	 * stops the kernel from drawing any of that -- it has no effect on
+	 * our own evdev-based input handling either way. */
+	if (tcgetattr(STDIN_FILENO, &g_orig_termios) != 0)
+		return; /* not a real tty (e.g. desktop testing) -- nothing to do */
+
+	g_termios_saved = 1;
+	atexit(restore_termios);
+
+	struct termios raw = g_orig_termios;
+	raw.c_lflag &= ~(ECHO | ICANON | ISIG);
+	raw.c_iflag &= ~(IXON | ICRNL);
+	raw.c_cc[VMIN] = 0;
+	raw.c_cc[VTIME] = 0;
+	tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+}
+
 int main(int argc, char **argv)
 {
 	redirect_stderr_to_log();
+	set_raw_terminal();
 
 	const char *target = argc > 1 ? argv[1] : "/media/fat/video";
 	const char *fb_path = getenv("VPLAYER_FB_DEVICE");
